@@ -43,6 +43,14 @@ public class Reader {
 
     public static void main(String[] args) throws Exception {
 
+        // 显式注册 BouncyCastle + BCPQC provider（确保 CertGenerator 等类可用）
+        if (java.security.Security.getProvider("BC") == null) {
+            java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        }
+        if (java.security.Security.getProvider("BCPQC") == null) {
+            java.security.Security.addProvider(new org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider());
+        }
+
         System.out.println("PQCConfig: mode=" + PQCConfig.MODE
                 + "  dilithiumLevel=" + PQCConfig.DILITHIUM_LEVEL
                 + "  kyberLevel=" + PQCConfig.KYBER_LEVEL);
@@ -51,6 +59,7 @@ public class Reader {
 
         if (PQCConfig.isPQ()) {
             // ---- PQ mode: load Dilithium cert + private key ----
+            // Dilithium 证书由 PQCertTool 生成到 cert_pq/ 目录
             String certDir = "src/main/resources/cert_pq";
             String readerCertPath = certDir + "/Reader_dilithium_cert.pem";
             String readerSKPath   = certDir + "/Reader_dilithium_priv.pem";
