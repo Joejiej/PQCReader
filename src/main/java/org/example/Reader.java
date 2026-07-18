@@ -184,8 +184,21 @@ public class Reader {
             // 等待卡片出现
             terminal.waitForCardPresent(0); // 0 = 无限等待
 
-            // 连接到卡片
-            card = terminal.connect("*"); // "*" 表示任何协议
+            // 连接到卡片（处理 SCARD_E_PROTO_MISMATCH 竞态）
+            CardException lastEx = null;
+            card = null;
+            for (int attempt = 1; attempt <= 5 && card == null; attempt++) {
+                try {
+                    card = terminal.connect("*"); // "*" 表示任何协议
+                } catch (CardException e) {
+                    lastEx = e;
+                    System.out.println("连接协商未就绪（第 " + attempt + "/5 次: " + e.getMessage() + "），150ms 后重试...");
+                    try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+                }
+            }
+            if (card == null) {
+                throw lastEx;
+            }
             channel = card.getBasicChannel();
 
             System.out.println("✓ Android device detected!");
@@ -1601,7 +1614,7 @@ public class Reader {
         System.arraycopy(resBytes, 0, transcript, comBytes.length,  resBytes.length);
         this.transAH0 = PQCUtil.generateTransAH0(transcript);
 
-        // 6) HS = HMAC-SHA256(salt=transAH0, ikm=Se)；  SK_device = HKDF-Expand(HS,"enc"||transAH0,32)
+        // 6) HS = HMAC-SHA256(key=Se, msg=transAH0)；  SK_device = HKDF-Expand(HS,"enc"||transAH0,32)
         this.hs = PQCUtil.deriveHS(this.kyber_shared_secret, this.transAH0);
         this.expeditedSKDevice = PQCUtil.expandSKDevice(this.hs, this.transAH0);
         System.out.println("[PQ] Kyber shared secret derived; SK_device established.");

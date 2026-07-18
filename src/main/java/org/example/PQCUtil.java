@@ -225,8 +225,10 @@ public final class PQCUtil {
     // ================================================================== //
 
     /**
-     * HKDF-Extract: PRK = HMAC-SHA256(salt=transAH0, ikm=Se).
+     * HKDF-Extract: PRK = HMAC-SHA256(key=Se, msg=transAH0).
      * On the Reader side, Se (the Kyber shared secret) is held in memory.
+     * Note: Key/msg order here mirrors the UD side (Android Keystore
+     * constraint), which uses key=Se, msg=transAH0.
      *
      * @param se       Kyber shared secret (32 bytes)
      * @param transAH0 SHAKE256-512 hash of the transaction data (64 bytes)
@@ -234,8 +236,8 @@ public final class PQCUtil {
      */
     public static byte[] deriveHS(byte[] se, byte[] transAH0) throws Exception {
         Mac hmac = Mac.getInstance("HmacSHA256");
-        hmac.init(new SecretKeySpec(transAH0, "HmacSHA256"));
-        return hmac.doFinal(se);
+        hmac.init(new SecretKeySpec(se, "HmacSHA256"));
+        return hmac.doFinal(transAH0);
     }
 
     /**
